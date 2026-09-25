@@ -91,6 +91,20 @@ public final class TamableFoxes extends JavaPlugin implements Listener {
             case "1.21.9" -> nmsInterface = new NMSInterface_1_21_9_R1();
             case "1.21.10" -> nmsInterface = new NMSInterface_1_21_9_R1();
             case "1.21.11" -> nmsInterface = new NMSInterface_1_21_11_R1();
+            case "26.2" -> {
+                // Built as Java 25 bytecode, because 26.2 itself requires Java 25. Referring to that
+                // class directly would drag Java 25 into loading this class on every older server, so
+                // it is resolved by name here - which only ever happens on a 26.2 server.
+                try {
+                    nmsInterface = (NMSInterface) Class.forName("net.seanomik.tamablefoxes.versions.version_26_2_R1.NMSInterface_26_2_R1")
+                            .getDeclaredConstructor()
+                            .newInstance();
+                } catch (ReflectiveOperationException e) {
+                    Bukkit.getServer().getConsoleSender().sendMessage(Config.getPrefix() + ChatColor.RED + "Could not load the 26.2 handler!");
+                    e.printStackTrace();
+                    versionSupported = false;
+                }
+            }
 
             default -> {
                 Bukkit.getServer().getConsoleSender().sendMessage(Config.getPrefix() + ChatColor.RED + LanguageConfig.getUnsupportedMCVersionRegister());

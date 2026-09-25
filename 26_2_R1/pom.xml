@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>net.seanomik</groupId>
+    <artifactId>tamablefoxes-parent</artifactId>
+    <version>2.3.5</version>
+  </parent>
+
+  <artifactId>tamablefoxes_v26_2_R1</artifactId>
+
+  <!-- 26.2 needs Java 25, and its server ships the classes with their Mojang names, so this module
+       is compiled as Java 25 and no longer goes through the spigot remap (26.2 has no mapping
+       artifacts). Only 26.2 servers load these classes, and those run Java 25. -->
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>25</source>
+          <target>25</target>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+
+  <repositories>
+    <repository>
+      <id>codemc-snapshots-anvilgui</id>
+      <url>https://repo.codemc.io/repository/maven-snapshots/</url>
+    </repository>
+    <repository>
+      <id>spigot-repo</id>
+      <url>https://hub.spigotmc.org/nexus/content/repositories/snapshots/</url>
+    </repository>
+    <repository>
+      <id>codemc-snapshots</id>
+      <url>https://repo.codemc.io/repository/nms/</url>
+    </repository>
+  </repositories>
+
+  <dependencies>
+    <dependency>
+      <groupId>net.seanomik</groupId>
+      <artifactId>tamablefoxes-util</artifactId>
+      <version>${project.parent.version}</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.spigotmc</groupId>
+      <artifactId>spigot</artifactId>
+      <version>26.2-R0.1-SNAPSHOT</version>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>net.wesjd</groupId>
+      <artifactId>anvilgui</artifactId>
+      <version>1.10.11-SNAPSHOT</version>
+    </dependency>
+  </dependencies>
+</project>
