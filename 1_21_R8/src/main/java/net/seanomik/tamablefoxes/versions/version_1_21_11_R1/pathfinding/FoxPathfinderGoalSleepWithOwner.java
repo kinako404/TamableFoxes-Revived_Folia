@@ -10,7 +10,9 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.BedBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.seanomik.tamablefoxes.util.FoliaCompat;
 import net.seanomik.tamablefoxes.versions.version_1_21_11_R1.EntityTamableFox;
+import org.bukkit.Location;
 
 // From class EntityCat#b
 public class FoxPathfinderGoalSleepWithOwner extends Goal {
@@ -40,6 +42,12 @@ public class FoxPathfinderGoalSleepWithOwner extends Goal {
                     return false;
                 }
 
+                if (FoliaCompat.isFolia() && !FoliaCompat.isOwnedByCurrentRegion(ownerLocation())) {
+                    // The bed lies in a region this thread does not own, so neither the block nor
+                    // the foxes around it may be read from here.
+                    return false;
+                }
+
                 BlockPos blockposition = this.ownerPlayer.blockPosition();
                 BlockState iblockdata = this.fox.level().getBlockState(blockposition);
                 if (iblockdata.is(BlockTags.BEDS)) {
@@ -54,6 +62,11 @@ public class FoxPathfinderGoalSleepWithOwner extends Goal {
 
             return false;
         }
+    }
+
+    private Location ownerLocation() {
+        return new Location(this.fox.level().getWorld(),
+                this.ownerPlayer.getX(), this.ownerPlayer.getY(), this.ownerPlayer.getZ());
     }
 
     private boolean spaceIsOccupied() {

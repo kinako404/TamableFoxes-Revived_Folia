@@ -9,11 +9,13 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 
 public class LanguageConfig extends YamlConfiguration  {
-    private static LanguageConfig config;
-    private JavaPlugin plugin;
-    private File configFile;
+    // Read from every region thread, replaced wholesale by a reload: publish it safely and never
+    // mutate the instance readers may already be holding.
+    private static volatile LanguageConfig config;
+    private final JavaPlugin plugin;
+    private final File configFile;
 
-    public static LanguageConfig getConfig(JavaPlugin plugin) {
+    public static synchronized LanguageConfig getConfig(JavaPlugin plugin) {
         if (LanguageConfig.config == null) {
             LanguageConfig.config = new LanguageConfig(plugin);
         }
@@ -58,13 +60,9 @@ public class LanguageConfig extends YamlConfiguration  {
         }
     }
     
+    // Reads the file into a new instance, so that threads mid-read keep seeing a complete config.
     public void reloadConfig() {
-        try {
-            super.load(this.configFile);
-        }
-        catch (Exception e) {
-            e.printStackTrace();
-        }
+        LanguageConfig.config = new LanguageConfig(this.plugin);
     }
     
     public void saveDefaultConfig() {
@@ -179,15 +177,6 @@ public class LanguageConfig extends YamlConfiguration  {
         String str = config.getString("givefox-not-your-fox");
         if (str == null || str.isEmpty()) {
             str = "This is not your fox to give!";
-        }
-
-        return str;
-    }
-
-    public static String getTooLongInteraction() {
-        String str = config.getString("givefox-interact-timeout");
-        if (str == null || str.isEmpty()) {
-            str = "You took too long to interact with a fox!";
         }
 
         return str;

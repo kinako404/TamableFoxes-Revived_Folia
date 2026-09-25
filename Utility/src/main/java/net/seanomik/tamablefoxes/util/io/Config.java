@@ -9,7 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Config {
-    private static FileConfiguration config = null;
+    // Read from every region thread, replaced by a reload: publish it safely.
+    private static volatile FileConfiguration config = null;
 
     public static void reloadConfig(Plugin plugin) {
         plugin.reloadConfig();

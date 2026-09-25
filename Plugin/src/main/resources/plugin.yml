@@ -3,6 +3,7 @@ version: ${project.version}
 main: net.seanomik.tamablefoxes.TamableFoxes
 api-version: 1.14
 load: STARTUP
+folia-supported: true
 description: Adds tamable foxes to Minecraft!
 
 commands:

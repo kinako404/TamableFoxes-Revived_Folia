@@ -12,7 +12,9 @@ import net.minecraft.world.entity.ai.goal.target.TargetGoal;
 import net.minecraft.world.entity.ai.targeting.TargetingConditions;
 import net.minecraft.world.phys.AABB;
 import net.seanomik.tamablefoxes.versions.version_1_21_11_R1.NMSUtil;
+import net.seanomik.tamablefoxes.util.FoliaCompat;
 import org.bukkit.GameRule;
+import org.bukkit.Location;
 import org.bukkit.event.entity.EntityTargetEvent.TargetReason;
 import net.seanomik.tamablefoxes.versions.version_1_21_11_R1.EntityTamableFox;
 
@@ -115,8 +117,18 @@ public class FoxPathfinderGoalHurtByTarget extends TargetGoal {
                 }
             } while(flag);
 
+            if (!isTickingInThisRegion(entityinsentient)) {
+                // Folia: a fox another region is ticking must not be written to from here.
+                continue;
+            }
+
             this.alertOther(entityinsentient, this.mob.getLastHurtByMob());
         }
+    }
+
+    private boolean isTickingInThisRegion(Mob mob) {
+        return FoliaCompat.isOwnedByCurrentRegion(new Location(this.mob.level().getWorld(),
+                mob.getX(), mob.getY(), mob.getZ()));
     }
 
     protected void alertOther(Mob entityinsentient, LivingEntity entityliving) {

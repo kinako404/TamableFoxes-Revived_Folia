@@ -1,5 +1,6 @@
 package net.seanomik.tamablefoxes;
 
+import net.seanomik.tamablefoxes.util.FoliaCompat;
 import net.seanomik.tamablefoxes.util.NMSInterface;
 import net.seanomik.tamablefoxes.util.Utils;
 import net.seanomik.tamablefoxes.util.io.Config;
@@ -101,14 +102,24 @@ public final class TamableFoxes extends JavaPlugin implements Listener {
             }
         }
 
+        if (versionSupported && FoliaCompat.isFolia() && !nmsInterface.isFoliaCompatible()) {
+            // Folia ticks regions in parallel; a handler that still schedules through the Bukkit
+            // scheduler would fail at runtime rather than at startup.
+            Bukkit.getServer().getConsoleSender().sendMessage(Config.getPrefix() + ChatColor.RED + "Folia is only supported on Minecraft 1.21.11, and you are running MC version " + Bukkit.getMinecraftVersion() + "!");
+            Bukkit.getServer().getConsoleSender().sendMessage(Config.getPrefix() + "Disabling plugin...");
+            versionSupported = false;
+
+            Bukkit.getPluginManager().disablePlugin(this);
+        }
+
         if (versionSupported) {
             // Display starting message then register entity.
             Bukkit.getServer().getConsoleSender().sendMessage(Config.getPrefix() + ChatColor.YELLOW + LanguageConfig.getMCVersionLoading(Bukkit.getMinecraftVersion()));
             nmsInterface.registerCustomFoxEntity();
 
-            if (Config.getMaxPlayerFoxTames() != 0) {
-                SQLiteHelper.getInstance(this).createTablesIfNotExist();
-            }
+            // Loads the tamed fox amounts once, so that the threads ticking foxes never have to wait
+            // for the database later on.
+            SQLiteHelper.getInstance(this).createTablesIfNotExist();
         }
         Metrics metrics = new Metrics(this, BSTATS_PLUGIN_ID);
     }
@@ -176,6 +187,7 @@ public final class TamableFoxes extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         getServer().getConsoleSender().sendMessage(Config.getPrefix() + ChatColor.YELLOW + LanguageConfig.getSavingFoxMessage());
+        SQLiteHelper.shutdown();
     }
 
     public static TamableFoxes getPlugin() {

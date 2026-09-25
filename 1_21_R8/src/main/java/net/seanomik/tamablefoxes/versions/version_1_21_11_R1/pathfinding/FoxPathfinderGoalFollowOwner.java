@@ -15,6 +15,7 @@ import net.minecraft.world.level.pathfinder.WalkNodeEvaluator;
 import org.bukkit.Location;
 import org.bukkit.craftbukkit.v1_21_R7.entity.CraftEntity;
 import org.bukkit.event.entity.EntityTeleportEvent;
+import net.seanomik.tamablefoxes.util.FoliaCompat;
 import net.seanomik.tamablefoxes.versions.version_1_21_11_R1.EntityTamableFox;
 
 public class FoxPathfinderGoalFollowOwner extends Goal {
@@ -95,6 +96,14 @@ public class FoxPathfinderGoalFollowOwner extends Goal {
     }
 
     private void teleportToOwner() {
+        if (FoliaCompat.isFolia() && !FoliaCompat.isOwnedByCurrentRegion(ownerLocation())) {
+            // The owner is ticking in a region this thread does not own: hand the move over
+            // instead of writing the fox's position from here, which would place it somewhere
+            // this thread is not allowed to tick it.
+            FoliaCompat.teleportAsync(this.tamableFox.getBukkitEntity(), ownerLocation());
+            return;
+        }
+
         BlockPos blockposition = this.owner.blockPosition();
 
         for(int i = 0; i < 10; ++i) {
@@ -107,6 +116,11 @@ public class FoxPathfinderGoalFollowOwner extends Goal {
             }
         }
 
+    }
+
+    private Location ownerLocation() {
+        return new Location(this.tamableFox.level().getWorld(),
+                this.owner.getX(), this.owner.getY(), this.owner.getZ(), this.owner.getYRot(), this.owner.getXRot());
     }
 
     private boolean maybeTeleportTo(int i, int j, int k) {

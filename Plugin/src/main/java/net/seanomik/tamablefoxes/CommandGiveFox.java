@@ -2,12 +2,10 @@ package net.seanomik.tamablefoxes;
 
 import net.seanomik.tamablefoxes.util.io.Config;
 import net.seanomik.tamablefoxes.util.io.LanguageConfig;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
-import org.bukkit.entity.Fox;
 import org.bukkit.entity.HumanEntity;
 import org.bukkit.entity.Player;
 
@@ -58,40 +56,9 @@ public class CommandGiveFox implements TabExecutor {
 
         sender.sendMessage(Config.getPrefix() + ChatColor.WHITE + LanguageConfig.getInteractWithTransferringFox(givingToPlayer));
 
-        Bukkit.getScheduler().runTaskAsynchronously(plugin, r -> {
-            PlayerInteractEntityEventListener.SynchronizeFoxObject syncObject = new PlayerInteractEntityEventListener.SynchronizeFoxObject();
-            playerInteractListener.players.put(player.getUniqueId(), syncObject);
-
-            synchronized(syncObject) {
-                try {
-                    syncObject.wait();
-                    playerInteractListener.players.remove(player.getUniqueId());
-
-                    Fox fox = syncObject.interactedFox;
-                    if (fox == null) {
-                        sender.sendMessage("§cNo fox selected.");
-                        return;
-                    }
-                    if (player.getUniqueId().equals(plugin.nmsInterface.getFoxOwner(fox)) ||
-                            player.hasPermission("tamablefoxes.givefox.give.others")) {
-                        plugin.nmsInterface.changeFoxOwner(fox, givingToPlayer);
-
-                        Bukkit.getScheduler().runTask(plugin, r2 -> {
-                            // If the player that is receiving the fox is online, prompt them to rename their new fox!
-                            if (givingToPlayer.isOnline()) {
-                                plugin.nmsInterface.renameFox(fox, givingToPlayer);
-                            }
-                        });
-
-                        sender.sendMessage(Config.getPrefix() + ChatColor.GREEN + LanguageConfig.getGaveFox(givingToPlayer));
-                    } else {
-                        sender.sendMessage(Config.getPrefix() + ChatColor.RED + LanguageConfig.getNotYourFox());
-                    }
-                } catch (InterruptedException e) {
-                    sender.sendMessage(Config.getPrefix() + ChatColor.RED + LanguageConfig.getTooLongInteraction());
-                }
-            }
-        });
+        // Hand the rest of the transfer to the interact listener, which runs it on the thread
+        // owning the chosen fox once the player right clicks it.
+        playerInteractListener.expectFoxChoice(player, givingToPlayer);
 
         return true;
     }

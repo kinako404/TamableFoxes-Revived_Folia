@@ -51,4 +51,9 @@ public class NMSInterface_1_21_11_R1 implements NMSInterface {
         EntityTamableFox tamableFox = (EntityTamableFox) ((CraftEntity) fox).getHandle();
         tamableFox.rename(player);
     }
+
+    @Override
+    public boolean isFoliaCompatible() {
+        return true;
+    }
 }

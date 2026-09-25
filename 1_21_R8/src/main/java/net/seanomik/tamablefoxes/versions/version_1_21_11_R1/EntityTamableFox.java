@@ -52,12 +52,12 @@ import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
+import net.seanomik.tamablefoxes.util.FoliaCompat;
 import net.seanomik.tamablefoxes.util.Utils;
 import net.seanomik.tamablefoxes.util.io.Config;
 import net.seanomik.tamablefoxes.util.io.LanguageConfig;
 import net.seanomik.tamablefoxes.util.io.sqlite.SQLiteHelper;
 import net.wesjd.anvilgui.AnvilGUI;
-import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.GameRule;
@@ -77,6 +77,10 @@ public class EntityTamableFox extends Fox {
 
     //private static final EntityDataAccessor<Byte> bw; // DATA_FLAGS_ID
     private static final Predicate<Entity> AVOID_PLAYERS; // AVOID_PLAYERS
+
+    // Long enough to swallow the item use the client starts on the same click, short enough that
+    // the player does not notice the cooldown.
+    private static final int CLICKED_ITEM_COOLDOWN_TICKS = 5;
 
     static {
         AVOID_PLAYERS = (entity) -> !entity.isCrouching();// && EntitySelector.test(entity);
@@ -311,17 +315,21 @@ public class EntityTamableFox extends Fox {
     public void rename(org.bukkit.entity.Player player) {
         // FOX: catch errors
         try {
+            org.bukkit.entity.Entity tamableFox = this.getBukkitEntity();
+
             new AnvilGUI.Builder()
                     .onClick((slot, stateSnapshot) -> {
                         String text = stateSnapshot.getText();
                         if (slot == AnvilGUI.Slot.OUTPUT && !text.isEmpty()) {
-                            org.bukkit.entity.Entity tamableFox = this.getBukkitEntity();
-
                             // This will auto format the name for config settings.
                             String foxName = LanguageConfig.getFoxNameFormat(text, player.getDisplayName());
 
-                            tamableFox.setCustomName(foxName);
-                            tamableFox.setCustomNameVisible(true);
+                            // The fox may be ticking in a different region than the player naming it.
+                            FoliaCompat.runOnEntity(tamableFox, () -> {
+                                tamableFox.setCustomName(foxName);
+                                tamableFox.setCustomNameVisible(true);
+                            });
+
                             if (!LanguageConfig.getTamingChosenPerfect(text).equalsIgnoreCase("disabled")) {
                                 stateSnapshot.getPlayer().sendMessage(Config.getPrefix() + ChatColor.GREEN + LanguageConfig.getTamingChosenPerfect(text));
                             }
@@ -334,6 +342,9 @@ public class EntityTamableFox extends Fox {
                     .text("Fox name")
                     .title("Name your new friend!")
                     .plugin(Utils.tamableFoxesPlugin)
+                    // The player opens and answers the gui, so its callbacks have to run on the
+                    // thread owning them; Folia has no server wide main thread to fall back to.
+                    .mainThreadExecutor(task -> FoliaCompat.runOnEntity(player, task))
                     .open(player);
         } catch (Throwable throwable) {
             throwable.printStackTrace();
@@ -344,6 +355,17 @@ public class EntityTamableFox extends Fox {
     public InteractionResult mobInteract(Player entityhuman, InteractionHand enumhand) {
         ItemStack itemstack = entityhuman.getItemInHand(enumhand);
         Item item = itemstack.getItem();
+
+        // The client only knows a plain fox, and a plain fox's interaction passes for chicken and
+        // meat, so on this very click the client also starts using (eating) the held item. In
+        // creative eating is always allowed, so the player then eats the chicken it just tamed the
+        // fox with. A short cooldown makes the client and the server drop that item use; the
+        // interaction itself, which is what tames the fox, is not affected by a cooldown.
+        if (!itemstack.isEmpty()
+                && (item == Items.CHICKEN || item.builtInRegistryHolder().is(ItemTags.MEAT))
+                && entityhuman instanceof ServerPlayer serverPlayer) {
+            serverPlayer.getCooldowns().addCooldown(itemstack, CLICKED_ITEM_COOLDOWN_TICKS);
+        }
 
         if (item instanceof SpawnEggItem) {
             return super.mobInteract(entityhuman, enumhand);
@@ -402,9 +424,10 @@ public class EntityTamableFox extends Fox {
                         this.setDeltaMovement(Vec3.ZERO); // FOX - set velocity to zero
                     }
 
-                    // Run this task async to make sure to not slow the server down.
-                    // This is needed due to the item being removed as soon as its put in the foxes mouth.
-                    Bukkit.getScheduler().runTaskLaterAsynchronously(Utils.tamableFoxesPlugin, ()-> {
+                    // Delaying by a tick is needed due to the item being removed as soon as its put
+                    // in the foxes mouth. This mutates the fox and the player's hand, so it has to
+                    // run on the thread owning them rather than off-thread.
+                    FoliaCompat.runOnEntityLater(this.getBukkitEntity(), () -> {
                         // Put item in mouth
                         if (entityhuman.hasItemInSlot(EquipmentSlot.MAINHAND)) {
                             ItemStack c = itemstack.copy();
@@ -515,6 +538,9 @@ public class EntityTamableFox extends Fox {
     public LivingEntity getOwner() {
         try {
             UUID ownerUuid = this.getOwnerUUID();
+            // On Folia this can resolve a player that another region is ticking. Callers only read
+            // that player's position to decide where to walk, which is why that is acceptable;
+            // anything that changes the owner has to hop onto the owner's region first.
             return ownerUuid == null ? null : this.level().getPlayerByUUID(ownerUuid);
         } catch (IllegalArgumentException var2) {
             return null;

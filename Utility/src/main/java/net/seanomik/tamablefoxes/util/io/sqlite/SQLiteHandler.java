@@ -11,7 +11,7 @@ public class SQLiteHandler {
 
 	private static SQLiteHandler instance;
 
-	public static SQLiteHandler getInstance() {
+	public static synchronized SQLiteHandler getInstance() {
 		if (instance == null) {
 			instance = new SQLiteHandler();
 		}

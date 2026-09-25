@@ -17,4 +17,9 @@ public interface NMSInterface {
     void changeFoxOwner(Fox fox, Player newOwner);
     UUID getFoxOwner(Fox fox);
     void renameFox(org.bukkit.entity.Fox fox, Player player);
+
+    /** True when this handler only uses scheduling that is safe on Folia's region threads. */
+    default boolean isFoliaCompatible() {
+        return false;
+    }
 }
