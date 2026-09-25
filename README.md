@@ -28,6 +28,24 @@ The game versions currently supported by this plugin are as follows:
 
 1.21、 1.21.1、 1.21.4、 1.21.5、 1.21.6、 1.21.7、 1.21.8、 1.21.9、 1.21.10、 1.21.11
 
+### Folia
+
+This build also runs on [Folia](https://github.com/PaperMC/Folia), Paper's regionised multithreaded fork.
+
+**Folia is only supported on 1.21.11.** On every other version Folia disables the plugin at startup and prints why, because only the 1.21.11 handler schedules its work the way regionised ticking requires - the older handlers would fail in the middle of a game instead.
+
+What was adapted for Folia:
+
+* scheduled work goes through a region or entity scheduler instead of `Bukkit.getScheduler()`; [FoliaCompat](Utility/src/main/java/net/seanomik/tamablefoxes/util/FoliaCompat.java) keeps the same code working on Paper and Spigot
+* `/givefox` no longer blocks a thread while it waits for a fox to be clicked: the transfer happens inside the click event, on the thread owning the fox
+* the config and the language file are swapped as whole objects, so a reload cannot be seen half applied by the threads ticking foxes
+* the tamed fox counts are read from memory and written by one background thread, so no region thread waits for the database
+
+Known limits:
+
+* the fox only reads its owner where the owner may belong to another region, and never writes there: following an owner across regions uses `teleportAsync`, and a fox in a different region than the bed simply does not go sleeping
+* the client predicts a plain fox for every click, so it may start using (eating) the held item before the server answers; the plugin puts that item on a short cooldown to drop the item use, which is why a chicken can briefly look like it is on cooldown after clicking a fox
+
 ### Default configuration files:
 * [config.yml](https://github.com/bgfoxsland/TamableFoxes-Revived/blob/master/Plugin/src/main/resources/config.yml)
 * [language.yml](https://github.com/bgfoxsland/TamableFoxes-Revived/blob/master/Plugin/src/main/resources/language.yml)
@@ -89,7 +107,7 @@ Have you ever wanted to tame foxes? Well, now you can! <b>Use chicken to tame</b
 ## Building
 Use JDK 21 and run `mvn package` to build the project.
 
-After building, you can find the plugin in `./run/plugins/`
+After building, you can find the plugin in `./run/plugins/`. The single jar targets Minecraft 1.14 - 1.21.11 on Paper/Spigot, and Folia 1.21.11.
 
 *<small>Although the old information below mentions using compileSpigotVersions.sh to prepare the maven cache, I found in practice that with good network conditions, using JDK 21 and running `mvn package` is sufficient.</small>*
 

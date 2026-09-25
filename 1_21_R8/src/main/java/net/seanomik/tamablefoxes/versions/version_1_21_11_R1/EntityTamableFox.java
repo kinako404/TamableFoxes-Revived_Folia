@@ -73,6 +73,16 @@ import net.seanomik.tamablefoxes.versions.version_1_21_11_R1.pathfinding.FoxPath
 import net.seanomik.tamablefoxes.versions.version_1_21_11_R1.pathfinding.FoxPathfinderGoalSleepWhenOrdered;
 import net.seanomik.tamablefoxes.versions.version_1_21_11_R1.pathfinding.FoxPathfinderGoalSleepWithOwner;
 
+/**
+ * The fox a player can tame.
+ *
+ * This class only exists on the server: it is installed by replacing the factory of
+ * {@link EntityType#FOX}, so clients still see - and predict - a plain fox.
+ *
+ * Everything here runs on the thread that owns the fox, which is what Folia's regions require;
+ * work that has to come back later goes through
+ * {@link net.seanomik.tamablefoxes.util.FoliaCompat}.
+ */
 public class EntityTamableFox extends Fox {
 
     //private static final EntityDataAccessor<Byte> bw; // DATA_FLAGS_ID

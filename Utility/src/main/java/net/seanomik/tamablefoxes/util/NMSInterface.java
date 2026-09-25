@@ -18,7 +18,11 @@ public interface NMSInterface {
     UUID getFoxOwner(Fox fox);
     void renameFox(org.bukkit.entity.Fox fox, Player player);
 
-    /** True when this handler only uses scheduling that is safe on Folia's region threads. */
+    /**
+     * True when this handler only schedules work the way Folia's region threads allow. The handlers
+     * that still use the Bukkit scheduler return false, and on Folia the plugin refuses to run for
+     * those versions instead of failing in the middle of a game.
+     */
     default boolean isFoliaCompatible() {
         return false;
     }
