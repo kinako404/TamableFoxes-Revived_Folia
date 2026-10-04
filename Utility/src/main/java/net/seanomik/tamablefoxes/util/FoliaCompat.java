@@ -17,7 +17,7 @@ import java.util.function.Consumer;
  */
 public final class FoliaCompat {
 
-    private static final Consumer<Object> NO_RETIRE_HANDLER = task -> { };
+    private static final Runnable NO_RETIRE_HANDLER = () -> { };
 
     private static final boolean FOLIA = detectFolia();
 
@@ -119,10 +119,13 @@ public final class FoliaCompat {
     private static void scheduleOnEntity(Entity entity, Runnable task, long delayTicks) {
         try {
             Object scheduler = GET_ENTITY_SCHEDULER.invoke(entity);
+            // The scheduler takes the task as a Consumer<ScheduledTask>; the Runnable slot is only
+            // a retired callback that runs when the entity is removed before the task could.
+            Consumer<Object> scheduled = ignored -> task.run();
             if (delayTicks < 0L) {
-                ENTITY_SCHEDULER_RUN.invoke(scheduler, Utils.tamableFoxesPlugin, NO_RETIRE_HANDLER, task);
+                ENTITY_SCHEDULER_RUN.invoke(scheduler, Utils.tamableFoxesPlugin, scheduled, NO_RETIRE_HANDLER);
             } else {
-                ENTITY_SCHEDULER_RUN_DELAYED.invoke(scheduler, Utils.tamableFoxesPlugin, NO_RETIRE_HANDLER, task, delayTicks);
+                ENTITY_SCHEDULER_RUN_DELAYED.invoke(scheduler, Utils.tamableFoxesPlugin, scheduled, NO_RETIRE_HANDLER, delayTicks);
             }
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException("Could not schedule a task on an entity", e);
