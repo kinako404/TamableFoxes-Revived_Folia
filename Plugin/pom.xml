@@ -288,6 +288,12 @@
         </dependency>
         <dependency>
             <groupId>net.seanomik</groupId>
+            <artifactId>tamablefoxes_v26_3_R1</artifactId>
+            <version>${project.parent.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.seanomik</groupId>
             <artifactId>tamablefoxes_v1_21_9_R1</artifactId>
             <version>2.3.5</version>
             <scope>compile</scope>

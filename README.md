@@ -28,13 +28,13 @@ The game versions currently supported by this plugin are as follows:
 
 1.21、 1.21.1、 1.21.4、 1.21.5、 1.21.6、 1.21.7、 1.21.8、 1.21.9、 1.21.10、 1.21.11
 
-26.2
+26.2、 26.3
 
 ### Folia
 
 This build also runs on [Folia](https://github.com/PaperMC/Folia), Paper's regionised multithreaded fork.
 
-**Folia is supported on 1.21.11 and 26.2.** On every other version Folia disables the plugin at startup and prints why, because only those two handlers schedule their work the way regionised ticking requires - the older handlers would fail in the middle of a game instead.
+**Folia is supported on 1.21.11 and 26.2**; on 26.3 the plugin runs on Paper, as Folia has no 26.3 build yet. On every other version Folia disables the plugin at startup and prints why, because only those two handlers schedule their work the way regionised ticking requires - the older handlers would fail in the middle of a game instead.
 
 1.21.11 and everything older is built as Java 21. The 26.2 handler is Java 25 bytecode, because 26.2 itself needs Java 25: it is loaded by name and only ever touched on a 26.2 server, so every older server keeps running on Java 21.
 
