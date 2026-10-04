@@ -49,6 +49,10 @@ public class FoxRenameGui implements Listener {
             return;
         }
 
+        // An anvil with empty slots has nothing to confirm, so the player gets a piece of paper
+        // whose name they edit.
+        anvil.setItem(0, new org.bukkit.inventory.ItemStack(org.bukkit.Material.PAPER));
+
         PENDING.put(player.getUniqueId(), onRename);
         player.openInventory(anvil);
     }
