@@ -323,42 +323,29 @@ public class EntityTamableFox extends Fox {
     }
 
     public void rename(org.bukkit.entity.Player player) {
-        // FOX: catch errors
-        try {
-            org.bukkit.entity.Entity tamableFox = this.getBukkitEntity();
+        org.bukkit.entity.Entity tamableFox = this.getBukkitEntity();
 
-            new AnvilGUI.Builder()
-                    .onClick((slot, stateSnapshot) -> {
-                        String text = stateSnapshot.getText();
-                        if (slot == AnvilGUI.Slot.OUTPUT && !text.isEmpty()) {
-                            // This will auto format the name for config settings.
-                            String foxName = LanguageConfig.getFoxNameFormat(text, player.getDisplayName());
+        // AnvilGUI picks its wrapper by probing the spigot class names, which 26.x no longer uses:
+        // touching it throws there. So this module opens a plain anvil itself.
+        net.seanomik.tamablefoxes.util.io.FoxRenameGui.open(Utils.tamableFoxesPlugin, player, text -> {
+            if (text.isEmpty()) {
+                player.sendMessage(Config.getPrefix() + ChatColor.GRAY + "The fox was not named");
+                return;
+            }
 
-                            // The fox may be ticking in a different region than the player naming it.
-                            FoliaCompat.runOnEntity(tamableFox, () -> {
-                                tamableFox.setCustomName(foxName);
-                                tamableFox.setCustomNameVisible(true);
-                            });
+            // This will auto format the name for config settings.
+            String foxName = LanguageConfig.getFoxNameFormat(text, player.getDisplayName());
 
-                            if (!LanguageConfig.getTamingChosenPerfect(text).equalsIgnoreCase("disabled")) {
-                                stateSnapshot.getPlayer().sendMessage(Config.getPrefix() + ChatColor.GREEN + LanguageConfig.getTamingChosenPerfect(text));
-                            }
-                        } else if (!LanguageConfig.getTamingChosenPerfect(text).equalsIgnoreCase("disabled")) {
-                            stateSnapshot.getPlayer().sendMessage(Config.getPrefix() + ChatColor.GRAY + "The fox was not named");
-                        }
+            // The fox may be ticking in a different region than the player naming it.
+            FoliaCompat.runOnEntity(tamableFox, () -> {
+                tamableFox.setCustomName(foxName);
+                tamableFox.setCustomNameVisible(true);
+            });
 
-                        return Arrays.asList(AnvilGUI.ResponseAction.close());
-                    })
-                    .text("Fox name")
-                    .title("Name your new friend!")
-                    .plugin(Utils.tamableFoxesPlugin)
-                    // The player opens and answers the gui, so its callbacks have to run on the
-                    // thread owning them; Folia has no server wide main thread to fall back to.
-                    .mainThreadExecutor(task -> FoliaCompat.runOnEntity(player, task))
-                    .open(player);
-        } catch (Throwable throwable) {
-            throwable.printStackTrace();
-        }
+            if (!LanguageConfig.getTamingChosenPerfect(text).equalsIgnoreCase("disabled")) {
+                player.sendMessage(Config.getPrefix() + ChatColor.GREEN + LanguageConfig.getTamingChosenPerfect(text));
+            }
+        });
     }
 
     @Override
