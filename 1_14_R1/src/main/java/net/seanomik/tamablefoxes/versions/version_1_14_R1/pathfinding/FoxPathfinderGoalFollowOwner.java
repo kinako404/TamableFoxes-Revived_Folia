@@ -91,6 +91,17 @@ public class FoxPathfinderGoalFollowOwner extends PathfinderGoal {
                         }
                     }
                 }
+
+                // No safe spot found: fall back to the owner's position so the fox is never left behind.
+                CraftEntity entity = this.a.getBukkitEntity();
+                Location to = new Location(entity.getWorld(), this.c.locX, this.c.locY, this.c.locZ, this.a.yaw, this.a.pitch);
+                EntityTeleportEvent event = new EntityTeleportEvent(entity, entity.getLocation(), to);
+                this.a.world.getServer().getPluginManager().callEvent(event);
+                if (!event.isCancelled()) {
+                    to = event.getTo();
+                    this.a.setPositionRotation(to.getX(), to.getY(), to.getZ(), to.getYaw(), to.getPitch());
+                    this.e.o();
+                }
             }
         }
 

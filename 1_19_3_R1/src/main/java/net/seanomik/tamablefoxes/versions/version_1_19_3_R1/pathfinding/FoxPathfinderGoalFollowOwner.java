@@ -108,6 +108,16 @@ public class FoxPathfinderGoalFollowOwner extends Goal {
             }
         }
 
+        // No safe spot found: fall back to the owner's position so the fox is never left behind.
+        CraftEntity entity = this.tamableFox.getBukkitEntity();
+        Location to = new Location(entity.getWorld(), this.owner.getX(), this.owner.getY(), this.owner.getZ(), this.tamableFox.getYRot(), this.tamableFox.getXRot());
+        EntityTeleportEvent event = new EntityTeleportEvent(entity, entity.getLocation(), to);
+        this.tamableFox.level.getCraftServer().getPluginManager().callEvent(event);
+        if (!event.isCancelled()) {
+            to = event.getTo();
+            this.tamableFox.moveTo(to.getX(), to.getY(), to.getZ(), to.getYaw(), to.getPitch());
+            this.navigation.stop();
+        }
     }
 
     private boolean maybeTeleportTo(int i, int j, int k) {

@@ -194,6 +194,7 @@ public class EntityTamableFox extends Fox {
 
             Goal eatBerries = new FoxEatBerriesGoal(1.2000000476837158D, 12, 2);
             this.goalSelector.addGoal(11, eatBerries);
+            untamedGoals.add(eatBerries);
             untamedGoals.add(randomStroll);
             untamedGoals.add(searchForItems);
 

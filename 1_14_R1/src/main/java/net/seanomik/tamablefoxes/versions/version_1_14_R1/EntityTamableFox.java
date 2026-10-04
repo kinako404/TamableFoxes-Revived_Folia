@@ -114,6 +114,7 @@ public class EntityTamableFox extends EntityFox {
             // EatBerries (Pick berry bushes)
             PathfinderGoal eatBerries = new f(1.2000000476837158D, 12, 2);
             this.goalSelector.a(10, eatBerries);
+            untamedGoals.add(eatBerries);
             untamedGoals.add(randomStroll);
             untamedGoals.add(searchForItems);
 
