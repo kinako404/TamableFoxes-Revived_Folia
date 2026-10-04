@@ -1,6 +1,7 @@
 package net.seanomik.tamablefoxes.util.io;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -8,6 +9,8 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.Plugin;
 
 import java.lang.reflect.Method;
@@ -22,14 +25,27 @@ import java.util.function.Consumer;
  * AnvilGUI cannot be used on 26.x: it picks its wrapper by probing for the spigot class names, and
  * 26.x no longer uses those, so merely touching the class throws there.
  *
- * The typed text is read reflectively because this module is compiled against the 1.14 API, which
- * has no {@code AnvilInventory#getRenameText} yet.
+ * The typed name is read from the renamed output item rather than through
+ * {@code AnvilInventory#getRenameText}: this module is compiled against the 1.14 API and the anvil
+ * inventory class has moved between versions, so the rename text is not reliably reachable. The
+ * anvil itself is tracked by identity for the same reason - the inventory type enum cannot be
+ * named from this api level either.
  */
 public class FoxRenameGui implements Listener {
 
     private static final int ANVIL_OUTPUT_SLOT = 2;
 
-    private static final Map<UUID, Consumer<String>> PENDING = new ConcurrentHashMap<>();
+    private static final class Pending {
+        private final Inventory anvil;
+        private final Consumer<String> onRename;
+
+        private Pending(Inventory anvil, Consumer<String> onRename) {
+            this.anvil = anvil;
+            this.onRename = onRename;
+        }
+    }
+
+    private static final Map<UUID, Pending> PENDING = new ConcurrentHashMap<>();
     private static final FoxRenameGui LISTENER = new FoxRenameGui();
     private static boolean registered;
 
@@ -51,9 +67,9 @@ public class FoxRenameGui implements Listener {
 
         // An anvil with empty slots has nothing to confirm, so the player gets a piece of paper
         // whose name they edit.
-        anvil.setItem(0, new org.bukkit.inventory.ItemStack(org.bukkit.Material.PAPER));
+        anvil.setItem(0, new ItemStack(Material.PAPER));
 
-        PENDING.put(player.getUniqueId(), onRename);
+        PENDING.put(player.getUniqueId(), new Pending(anvil, onRename));
         player.openInventory(anvil);
     }
 
@@ -117,23 +133,32 @@ public class FoxRenameGui implements Listener {
 
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (!(event.getWhoClicked() instanceof Player player) || event.getRawSlot() != ANVIL_OUTPUT_SLOT) {
+        if (!(event.getWhoClicked() instanceof Player player)) {
             return;
         }
 
-        if (!"ANVIL".equals(String.valueOf(event.getView().getTopInventory().getType()))) {
+        Pending pending = PENDING.get(player.getUniqueId());
+        if (pending == null || event.getInventory() != pending.anvil) {
             return;
         }
 
-        Consumer<String> onRename = PENDING.remove(player.getUniqueId());
-        if (onRename == null) {
-            return;
-        }
-
-        // The vanilla anvil would hand the renamed item over; we only want the text.
+        // Nothing may leave or enter this anvil; it only exists to collect the name.
         event.setCancelled(true);
+
+        if (event.getRawSlot() != ANVIL_OUTPUT_SLOT) {
+            return;
+        }
+
+        // The output slot holds the paper renamed to whatever the player typed, so the name comes
+        // from the item itself. An empty output means nothing was typed yet - stay open.
+        String text = displayName(event.getCurrentItem());
+        if (text.isEmpty()) {
+            return;
+        }
+
+        PENDING.remove(player.getUniqueId());
         player.closeInventory();
-        onRename.accept(renameText(event.getView().getTopInventory()));
+        pending.onRename.accept(text);
     }
 
     @EventHandler
@@ -142,19 +167,18 @@ public class FoxRenameGui implements Listener {
             return;
         }
 
-        Consumer<String> onRename = PENDING.remove(player.getUniqueId());
-        if (onRename != null) {
-            onRename.accept("");
+        Pending pending = PENDING.remove(player.getUniqueId());
+        if (pending != null) {
+            pending.onRename.accept("");
         }
     }
 
-    /** Looked up on the instance, because the anvil inventory interface moved between versions. */
-    private static String renameText(Inventory anvil) {
-        try {
-            Object text = anvil.getClass().getMethod("getRenameText").invoke(anvil);
-            return text == null ? "" : text.toString();
-        } catch (ReflectiveOperationException e) {
+    private static String displayName(ItemStack item) {
+        if (item == null || item.getType() == Material.AIR || !item.hasItemMeta()) {
             return "";
         }
+
+        ItemMeta meta = item.getItemMeta();
+        return meta != null && meta.hasDisplayName() ? meta.getDisplayName() : "";
     }
 }
