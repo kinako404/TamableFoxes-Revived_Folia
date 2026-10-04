@@ -51,21 +51,21 @@ public class EntityTamableFox extends EntityFox {
             Field landTargetGoal = this.getClass().getSuperclass().getDeclaredField("bH");
             landTargetGoal.setAccessible(true);
             landTargetGoal.set(this, new PathfinderGoalNearestAttackableTarget(this, EntityAnimal.class, 10, false, false, (entityliving) -> {
-                return (!isTamed() || (Config.doesTamedAttackWildAnimals() && isTamed())) && (entityliving instanceof EntityChicken || entityliving instanceof EntityRabbit);
+                return !isTamed() && (entityliving instanceof EntityChicken || entityliving instanceof EntityRabbit);
             }));
             landTargetGoal.setAccessible(false);
 
             Field turtleEggTargetGoal = this.getClass().getSuperclass().getDeclaredField("bI");
             turtleEggTargetGoal.setAccessible(true);
             turtleEggTargetGoal.set(this, new PathfinderGoalNearestAttackableTarget(this, EntityTurtle.class, 10, false, false, (entityLiving) -> {
-                return (!isTamed() || (Config.doesTamedAttackWildAnimals() && isTamed())) && EntityTurtle.bz.test((EntityLiving) entityLiving);
+                return !isTamed() && EntityTurtle.bz.test((EntityLiving) entityLiving);
             }));
             turtleEggTargetGoal.setAccessible(false);
 
             Field fishTargetGoal = this.getClass().getSuperclass().getDeclaredField("bJ");
             fishTargetGoal.setAccessible(true);
             fishTargetGoal.set(this, new PathfinderGoalNearestAttackableTarget(this, EntityFish.class, 20, false, false, (entityliving) -> {
-                return (!isTamed() || (Config.doesTamedAttackWildAnimals() && isTamed())) && entityliving instanceof EntityFishSchool;
+                return !isTamed() && entityliving instanceof EntityFishSchool;
             }));
             fishTargetGoal.setAccessible(false);
 
@@ -89,8 +89,10 @@ public class EntityTamableFox extends EntityFox {
             this.goalSelector.a(8, new FoxPathfinderGoalSleepWithOwner(this));
             this.goalSelector.a(9, new FoxPathfinderGoalFollowOwner(this, 1.0D, 10.0F, 2.0F));
             this.goalSelector.a(10, new PathfinderGoalLeapAtTarget(this, 0.4F));
-            this.goalSelector.a(11, new PathfinderGoalRandomStrollLand(this, 1.0D));
-            this.goalSelector.a(11, getFoxInnerPathfinderGoal("p")); // FoxSearchForItemsGoal
+            PathfinderGoal randomStroll = new PathfinderGoalRandomStrollLand(this, 1.0D);
+            this.goalSelector.a(11, randomStroll);
+            PathfinderGoal searchForItems = getFoxInnerPathfinderGoal("p"); // FoxSearchForItemsGoal
+            this.goalSelector.a(11, searchForItems);
             this.goalSelector.a(12, getFoxInnerPathfinderGoal("j", Arrays.asList(this, EntityHuman.class, 24.0F), Arrays.asList(EntityInsentient.class, Class.class, float.class))); // FoxLookAtPlayerGoal
 
             this.targetSelector.a(1, new FoxPathfinderGoalOwnerHurtByTarget(this));
@@ -112,7 +114,8 @@ public class EntityTamableFox extends EntityFox {
             // EatBerries (Pick berry bushes)
             PathfinderGoal eatBerries = new f(1.2000000476837158D, 12, 2);
             this.goalSelector.a(10, eatBerries);
-            untamedGoals.add(eatBerries); // Maybe this should be configurable too?
+            untamedGoals.add(randomStroll);
+            untamedGoals.add(searchForItems);
 
             PathfinderGoal seekShelter = getFoxInnerPathfinderGoal("s", Arrays.asList(1.25D), Arrays.asList(double.class));
             this.goalSelector.a(6, seekShelter); // SeekShelter
@@ -255,7 +258,6 @@ public class EntityTamableFox extends EntityFox {
                         String foxName = LanguageConfig.getFoxNameFormat(text, player.getDisplayName());
 
                         tamableFox.setCustomName(foxName);
-                        tamableFox.setCustomNameVisible(true);
                         if (!LanguageConfig.getTamingChosenPerfect(text).equalsIgnoreCase("disabled")) {
                             stateSnapshot.getPlayer().sendMessage(Config.getPrefix() + ChatColor.GREEN + LanguageConfig.getTamingChosenPerfect(text));
                         }
@@ -369,8 +371,8 @@ public class EntityTamableFox extends EntityFox {
                         return true;
                     }
 
-                    // 0.33% chance to tame the fox, also check if the called tame entity event is cancelled or not.
-                    if (this.random.nextInt(3) == 0 && !CraftEventFactory.callEntityTameEvent(this, entityhuman).isCancelled()) {
+                    // Chance to tame per chicken, from the config. Also check the tame event isn't cancelled.
+                    if (this.random.nextFloat() < Config.getTamingChance() && !CraftEventFactory.callEntityTameEvent(this, entityhuman).isCancelled()) {
                         this.tame(entityhuman);
 
                         // Remove all navigation when tamed.

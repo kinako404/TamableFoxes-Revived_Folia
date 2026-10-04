@@ -1,11 +1,10 @@
 # Config for Tamable Foxes
 show-owner-in-fox-name: true
 ask-for-name-after-taming: true
+# Chance that one chicken tames the fox, between 0 and 1 (0.33 = one in three).
+taming-chance: 0.33
 max-fox-tames: 0
 prefix: "&c[Tamable Foxes] "
 
 no-tame-worlds:
   - world_nether
-
-tamed-behavior:
-  attack-wild-animals: true

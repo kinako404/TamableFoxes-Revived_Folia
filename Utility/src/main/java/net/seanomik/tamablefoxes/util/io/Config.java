@@ -24,9 +24,6 @@ public class Config {
     // Does the owner's name show if the foxes name?
     public static boolean doesShowOwnerInFoxName() { return config.getBoolean("show-owner-in-fox-name"); }
 
-    // Check if a tamed fox attacks wild animals.
-    public static boolean doesTamedAttackWildAnimals() { return config.getBoolean("tamed-behavior.attack-wild-animals"); }
-
     // Get worlds that taming is not allowed in.
     public static List<String> BannedWorlds() {
         return config.contains("no-tame-worlds") ? config.getStringList("no-tame-worlds") : new ArrayList<>();
@@ -44,6 +41,11 @@ public class Config {
 
     // Check if the plugin asks for a fox name after taming.
     public static boolean askForNameAfterTaming() { return config.getBoolean("ask-for-name-after-taming"); }
+
+    // Chance that one chicken tames the fox, between 0 and 1. Defaults to the original 1/3.
+    public static double getTamingChance() {
+        return config.contains("taming-chance") ? config.getDouble("taming-chance") : 1.0D / 3.0D;
+    }
 
     public static String getPrefix() {
         return ChatColor.translateAlternateColorCodes('&', config.contains("prefix") ? config.getString("prefix") : "&c[Tamable Foxes] ");
