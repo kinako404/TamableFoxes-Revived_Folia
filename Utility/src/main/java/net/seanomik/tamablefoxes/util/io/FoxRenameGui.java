@@ -29,18 +29,9 @@ public class FoxRenameGui implements Listener {
 
     private static final int ANVIL_OUTPUT_SLOT = 2;
 
-    private static final Method GET_RENAME_TEXT = findRenameText();
     private static final Map<UUID, Consumer<String>> PENDING = new ConcurrentHashMap<>();
     private static final FoxRenameGui LISTENER = new FoxRenameGui();
     private static boolean registered;
-
-    private static Method findRenameText() {
-        try {
-            return Class.forName("org.bukkit.inventory.AnvilInventory").getMethod("getRenameText");
-        } catch (ClassNotFoundException | NoSuchMethodException e) {
-            return null;
-        }
-    }
 
     private FoxRenameGui() {
     }
@@ -63,58 +54,52 @@ public class FoxRenameGui implements Listener {
     }
 
     /**
-     * Built reflectively: this module is compiled against the 1.14 API, where the inventory type
-     * lives in another package, and the title overload of the factory differs between versions
-     * (newer servers take an adventure Component, older ones a plain String).
+     * Built reflectively and without naming any API class: this module is compiled against the 1.14
+     * API, and later versions moved the inventory type to another package - 26.x does not even have
+     * the class the newer API uses. So the type is taken from the factory method that accepts it.
      */
     private static Inventory createAnvil() {
-        Class<?> inventoryType;
-        Object anvil;
-        try {
-            inventoryType = Class.forName("org.bukkit.inventory.InventoryType");
-            anvil = inventoryType.getField("ANVIL").get(null);
-        } catch (ReflectiveOperationException e) {
-            Bukkit.getLogger().warning("TamableFoxes: could not resolve the anvil inventory type: " + e);
-            return null;
-        }
+        Method plain = null;
+        Method titled = null;
 
-        Class<?> component = optionalClass("net.kyori.adventure.text.Component");
-        if (component != null) {
-            try {
-                Object title = component.getMethod("text", String.class).invoke(null, "Name your new friend!");
-                Inventory inventory = (Inventory) Bukkit.class
-                        .getMethod("createInventory", InventoryHolder.class, inventoryType, component)
-                        .invoke(null, null, anvil, title);
-                if (inventory != null) {
-                    return inventory;
-                }
-            } catch (ReflectiveOperationException ignored) {
-                // Fall through to the String overload.
+        for (Method method : Bukkit.class.getMethods()) {
+            if (!method.getName().equals("createInventory") || method.getParameterCount() < 2
+                    || method.getParameterTypes()[0] != InventoryHolder.class
+                    || !method.getParameterTypes()[1].isEnum()) {
+                continue;
+            }
+
+            if (method.getParameterCount() == 2) {
+                plain = method;
+            } else if (method.getParameterCount() == 3 && method.getParameterTypes()[2] == String.class) {
+                titled = method;
             }
         }
 
-        try {
-            return (Inventory) Bukkit.class
-                    .getMethod("createInventory", InventoryHolder.class, inventoryType, String.class)
-                    .invoke(null, null, anvil, "Name your new friend!");
-        } catch (ReflectiveOperationException ignored) {
-            // Fall through to the overload without a title.
+        Inventory inventory = titled == null ? null : anvilOf(titled, "Name your new friend!");
+        if (inventory == null && plain != null) {
+            inventory = anvilOf(plain);
         }
 
-        try {
-            return (Inventory) Bukkit.class
-                    .getMethod("createInventory", InventoryHolder.class, inventoryType)
-                    .invoke(null, null, anvil);
-        } catch (ReflectiveOperationException e) {
-            Bukkit.getLogger().warning("TamableFoxes: could not create the anvil inventory: " + e);
-            return null;
+        if (inventory == null) {
+            Bukkit.getLogger().warning("TamableFoxes: no usable Bukkit#createInventory overload for an anvil was found");
         }
+
+        return inventory;
     }
 
-    private static Class<?> optionalClass(String name) {
+    private static Inventory anvilOf(Method create, Object... title) {
         try {
-            return Class.forName(name);
-        } catch (ClassNotFoundException e) {
+            Object anvil = create.getParameterTypes()[1].getField("ANVIL").get(null);
+            Object[] arguments = new Object[create.getParameterCount()];
+            arguments[0] = null;
+            arguments[1] = anvil;
+            for (int i = 0; i < title.length; i++) {
+                arguments[2 + i] = title[i];
+            }
+
+            return (Inventory) create.invoke(null, arguments);
+        } catch (ReflectiveOperationException | IllegalArgumentException e) {
             return null;
         }
     }
@@ -159,13 +144,10 @@ public class FoxRenameGui implements Listener {
         }
     }
 
+    /** Looked up on the instance, because the anvil inventory interface moved between versions. */
     private static String renameText(Inventory anvil) {
-        if (GET_RENAME_TEXT == null) {
-            return "";
-        }
-
         try {
-            Object text = GET_RENAME_TEXT.invoke(anvil);
+            Object text = anvil.getClass().getMethod("getRenameText").invoke(anvil);
             return text == null ? "" : text.toString();
         } catch (ReflectiveOperationException e) {
             return "";
